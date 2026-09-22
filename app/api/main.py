@@ -9,7 +9,6 @@ from app.core.window import analyze_window
 from app.core.detector import analyze_window_result
 from app.services.file_monitor import start_monitor
 from app.services.detection_service import run_detection
-from app.services.response_service import simulate_response
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
