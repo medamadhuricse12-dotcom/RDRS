@@ -164,7 +164,7 @@ async function loadDashboard() {
     try {
 
         const statusResponse =
-            await fetch("http://127.0.0.1:8000/status");
+            await fetch("/status");
 
         const statusData =
             await statusResponse.json();
@@ -178,7 +178,7 @@ async function loadDashboard() {
 
         const scanResponse =
             await fetch(
-                "http://127.0.0.1:8000/scan",
+                "/scan",
                 {
                     method: "POST"
                 }
@@ -198,7 +198,7 @@ async function loadDashboard() {
 
 
         const alertsResponse =
-            await fetch("http://127.0.0.1:8000/alerts");
+            await fetch("/alerts");
 
         const alertsData =
             await alertsResponse.json();
@@ -208,7 +208,7 @@ async function loadDashboard() {
 
 
         const reportsResponse =
-            await fetch("http://127.0.0.1:8000/reports");
+            await fetch("/reports");
 
         const reportsData =
             await reportsResponse.json();
@@ -218,7 +218,7 @@ async function loadDashboard() {
 
 
         const eventsResponse =
-            await fetch("http://127.0.0.1:8000/events");
+            await fetch("/events");
 
         const eventsData =
             await eventsResponse.json();
