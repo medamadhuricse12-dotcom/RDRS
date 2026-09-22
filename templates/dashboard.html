@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>RDRS Dashboard</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f4f6f8;
+        }
+
+        header {
+            background: #1f2937;
+            color: white;
+            padding: 20px 30px;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        header p {
+            margin: 5px 0 0;
+        }
+
+        .container {
+            padding: 30px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: #374151;
+        }
+
+        .value {
+            font-size: 30px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .section {
+            background: white;
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #f3f4f6;
+        }
+
+        #severity {
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>RDRS Dashboard</h1>
+    <p>Ransomware Detection and Response System</p>
+</header>
+
+<div class="container">
+
+    <div class="cards">
+
+        <div class="card">
+            <h3>System Status</h3>
+            <div class="value" id="status">Loading...</div>
+        </div>
+
+        <div class="card">
+            <h3>Threat Score</h3>
+            <div class="value" id="threat-score">0</div>
+        </div>
+
+        <div class="card">
+            <h3>Severity</h3>
+            <div class="value" id="severity">Normal</div>
+        </div>
+
+        <div class="card">
+            <h3>Recent Events</h3>
+            <div class="value" id="events-count">0</div>
+        </div>
+
+        <div class="card">
+            <h3>Alerts</h3>
+            <div class="value" id="alerts-count">0</div>
+        </div>
+
+        <div class="card">
+            <h3>Incidents</h3>
+            <div class="value" id="incidents-count">0</div>
+        </div>
+
+    </div>
+
+
+    <div class="section">
+
+        <h2>Recent File Events</h2>
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Event</th>
+                    <th>File</th>
+                    <th>Entropy</th>
+                </tr>
+            </thead>
+
+            <tbody id="events-table">
+                <tr>
+                    <td colspan="4">Loading...</td>
+                </tr>
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+<script>
+
+async function loadDashboard() {
+
+    try {
+
+        const statusResponse =
+            await fetch("http://127.0.0.1:8000/status");
+
+        const statusData =
+            await statusResponse.json();
+
+        document.getElementById("status").textContent =
+            statusData.status;
+
+        document.getElementById("events-count").textContent =
+            statusData.recent_events;
+
+
+        const scanResponse =
+            await fetch(
+                "http://127.0.0.1:8000/scan",
+                {
+                    method: "POST"
+                }
+            );
+
+        const scanData =
+            await scanResponse.json();
+
+        const detection =
+            scanData.result.detection;
+
+        document.getElementById("threat-score").textContent =
+            detection.threat_score;
+
+        document.getElementById("severity").textContent =
+            detection.severity;
+
+
+        const alertsResponse =
+            await fetch("http://127.0.0.1:8000/alerts");
+
+        const alertsData =
+            await alertsResponse.json();
+
+        document.getElementById("alerts-count").textContent =
+            alertsData.length;
+
+
+        const reportsResponse =
+            await fetch("http://127.0.0.1:8000/reports");
+
+        const reportsData =
+            await reportsResponse.json();
+
+        document.getElementById("incidents-count").textContent =
+            reportsData.incidents;
+
+
+        const eventsResponse =
+            await fetch("http://127.0.0.1:8000/events");
+
+        const eventsData =
+            await eventsResponse.json();
+
+        const table =
+            document.getElementById("events-table");
+
+        table.innerHTML = "";
+
+
+        eventsData.slice(0, 10).forEach(event => {
+
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${event.timestamp}</td>
+                <td>${event.event_type}</td>
+                <td>${event.file_path}</td>
+                <td>${event.entropy ?? "-"}</td>
+            `;
+
+            table.appendChild(row);
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Dashboard error:",
+            error
+        );
+
+        document.getElementById("status").textContent =
+            "API Error";
+    }
+}
+
+
+loadDashboard();
+
+setInterval(
+    loadDashboard,
+    5000
+);
+
+</script>
+
+</body>
+</html>

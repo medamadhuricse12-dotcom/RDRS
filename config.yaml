@@ -1,0 +1,22 @@
+monitor:
+  paths:
+    - data/sandbox
+  recursive: true
+
+detection:
+  window_seconds: 60
+  thresholds:
+    modified_files: 10
+    renamed_files: 5
+    entropy: 7.0
+
+response:
+  simulation_mode: true
+  quarantine_path: data/quarantine
+
+database:
+  url: sqlite:///data/rdrs.db
+
+logging:
+  level: INFO
+  directory: logs

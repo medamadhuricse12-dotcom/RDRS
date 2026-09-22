@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+
+data/rdrs.db
+data/reports/
+data/quarantine/
+logs/
+
+app.py.backup
+templates/index.html.backup
+!data/sandbox/.gitkeep
