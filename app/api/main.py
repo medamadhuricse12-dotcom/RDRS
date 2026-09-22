@@ -2,12 +2,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import HTMLResponse
 
-from app.core.database import get_session, Alert, FileEvent, Incident
+from app.core.database import init_db, get_session, FileEvent, Alert, Incident
 from app.core.window import analyze_window
-from app.services.detection_service import run_detection
+from app.core.detector import analyze_window_result
 from app.services.file_monitor import start_monitor
+from app.services.detection_service import run_detection
+from app.services.response_service import simulate_response
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -15,21 +17,24 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 @asynccontextmanager
 async def lifespan(app):
-    monitor_observer = start_monitor(
-        path=str(BASE_DIR / "data" / "sandbox"),
+    # Create SQLite database tables on startup
+    init_db()
+
+    observer = start_monitor(
+        str(BASE_DIR / "data" / "sandbox"),
         recursive=True,
     )
 
     yield
 
-    monitor_observer.stop()
-    monitor_observer.join()
+    observer.stop()
+    observer.join()
 
 
 app = FastAPI(
     title="RDRS API",
-    description="Ransomware Detection and Response System API",
-    version="1.0.0",
+    description="Ransomware Detection and Response System",
+    version="1.0",
     lifespan=lifespan,
 )
 
@@ -45,15 +50,17 @@ def health():
 @app.get("/status")
 def status():
     window = analyze_window(60)
+    detection = analyze_window_result(window)
 
     return {
         "status": "running",
-        "monitor_path": str(BASE_DIR / "data" / "sandbox"),
         "window_seconds": 60,
         "recent_events": window["total_events"],
         "modified_files": window["modified_files"],
         "renamed_files": window["renamed_files"],
         "high_entropy_files": window["high_entropy_files"],
+        "threat_score": detection["threat_score"],
+        "severity": detection["severity"],
     }
 
 
@@ -65,14 +72,13 @@ def alerts():
         records = (
             session.query(Alert)
             .order_by(Alert.timestamp.desc())
-            .limit(50)
             .all()
         )
 
         return [
             {
                 "id": alert.id,
-                "timestamp": str(alert.timestamp),
+                "timestamp": alert.timestamp,
                 "severity": alert.severity,
                 "threat_score": alert.threat_score,
                 "message": alert.message,
@@ -100,7 +106,7 @@ def events():
         return [
             {
                 "id": event.id,
-                "timestamp": str(event.timestamp),
+                "timestamp": event.timestamp,
                 "event_type": event.event_type,
                 "file_path": event.file_path,
                 "entropy": event.entropy,
@@ -118,14 +124,14 @@ def reports():
     session = get_session()
 
     try:
-        alert_count = session.query(Alert).count()
-        incident_count = session.query(Incident).count()
-        event_count = session.query(FileEvent).count()
+        incidents = session.query(Incident).count()
+        alerts_count = session.query(Alert).count()
+        events_count = session.query(FileEvent).count()
 
         return {
-            "alerts": alert_count,
-            "incidents": incident_count,
-            "file_events": event_count,
+            "incidents": incidents,
+            "alerts": alerts_count,
+            "file_events": events_count,
         }
 
     finally:
@@ -134,22 +140,20 @@ def reports():
 
 @app.post("/scan")
 def scan():
-    result = run_detection(60)
-
+    result = run_detection()
     return {
-        "message": "Detection scan completed.",
+        "success": True,
         "result": result,
     }
 
 
 @app.post("/settings")
-def settings(settings_data: dict):
-    return JSONResponse(
-        content={
-            "message": "Settings received.",
-            "settings": settings_data,
-        }
-    )
+def settings():
+    return {
+        "simulation_mode": True,
+        "window_seconds": 60,
+        "monitor_path": str(BASE_DIR / "data" / "sandbox"),
+    }
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
